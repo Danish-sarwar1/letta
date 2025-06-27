@@ -20,7 +20,7 @@ public interface LettaApiClient {
     @GET("/v1/identities/{identityId}")
     Call<LettaIdentityResponse> getIdentity(@Path("identityId") String identityId);
     
-    @PUT("/v1/identities/{identityId}/properties/upsert")
+    @PUT("/v1/identities/{identityId}/properties")
     Call<Void> upsertIdentityProperties(@Path("identityId") String identityId, 
                                        @Body List<LettaIdentityProperty> properties);
     
