@@ -182,8 +182,8 @@ public class HealthChatController {
                 "user_agents", Map.of(
                     "userId", result.getUserId(),
                     "identityId", result.getIdentityId(),
-                    "contextCoordinatorId", result.getContextCoordinatorId(),
-                    "intentClassifierId", result.getIntentClassifierId(),
+                    "contextExtractorId", result.getContextExtractorId(),
+                    "intentExtractorId", result.getIntentExtractorId(),
                     "generalHealthId", result.getGeneralHealthId(),
                     "mentalHealthId", result.getMentalHealthId()
                 )

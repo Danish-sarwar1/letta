@@ -73,23 +73,23 @@ public class AgentOrchestrationService {
             // 1. Get user's agents
             UserAgentMapping agents = userIdentityService.getOrCreateUserAgents(userId);
             
-            // 2. Send to Context Coordinator first
-            String contextualMessage = processWithContextCoordinator(
-                agents.getContextCoordinatorId(), 
+            // 2. Process with Context Extractor - maintain last 3 messages and enrich current message
+            String enrichedMessage = extractAndEnrichContext(
+                agents.getContextExtractorId(), 
                 agents.getIdentityId(),
                 message, 
                 sessionId
             );
             
-            // 3. Classify intent
-            IntentResult intent = classifyIntent(
-                agents.getIntentClassifierId(),
+            // 3. Extract intent from enriched message (pure classification)
+            IntentResult intent = extractIntent(
+                agents.getIntentExtractorId(),
                 agents.getIdentityId(), 
-                contextualMessage
+                enrichedMessage
             );
             
-            // 4. Route to appropriate health agent
-            String response = routeToHealthAgent(agents, intent, contextualMessage);
+            // 4. Route to appropriate health agent with enriched context
+            String response = routeToHealthAgent(agents, intent, enrichedMessage);
             
             return ChatResponse.builder()
                 .message(response)
@@ -124,47 +124,56 @@ public class AgentOrchestrationService {
         }
     }
     
-    private String processWithContextCoordinator(String agentId, String identityId, 
-                                               String message, String sessionId) {
-        log.debug("Processing with Context Coordinator: {}", agentId);
+    /**
+     * Context Extractor: Maintains last 3 messages in Letta memory and enriches current message
+     */
+    private String extractAndEnrichContext(String contextExtractorId, String identityId, 
+                                          String message, String sessionId) {
+        log.debug("Extracting and enriching context with agent: {}", contextExtractorId);
         
+        // Send message to Context Extractor to update conversation history and provide enriched context
         LettaMessageRequest request = LettaMessageRequest.builder()
             .messages(Arrays.asList(
                 LettaMessage.builder()
                     .role("user")
-                    .content(String.format("Session: %s\nMessage: %s", sessionId, message))
+                    .content(String.format("SESSION:%s\nNEW_MESSAGE:%s\n\nPlease add this new message to your conversation_history and provide the enriched message with relevant context from the entire conversation for intent classification.", 
+                        sessionId, message))
                     .build()
             ))
             .senderId(identityId)
             .build();
             
-        LettaMessageResponse response = lettaAgentService.sendMessage(agentId, request);
+        LettaMessageResponse response = lettaAgentService.sendMessage(contextExtractorId, request);
         
-        // Extract contextual message from response
+        // Extract enriched message from response
         return extractAssistantMessage(response);
     }
     
-    private IntentResult classifyIntent(String agentId, String identityId, String contextualMessage) {
-        log.debug("Classifying intent with agent: {}", agentId);
+    /**
+     * Intent Extractor: Pure intent classification without context management
+     */
+    private IntentResult extractIntent(String intentExtractorId, String identityId, String enrichedMessage) {
+        log.debug("Extracting intent with agent: {}", intentExtractorId);
         
+        // Send enriched message to Intent Extractor for pure classification
         LettaMessageRequest request = LettaMessageRequest.builder()
             .messages(Arrays.asList(
                 LettaMessage.builder()
                     .role("user")
-                    .content("Classify intent: " + contextualMessage)
+                    .content(String.format("ENRICHED_MESSAGE_FOR_CLASSIFICATION:\n%s\n\nPlease classify the intent as: GENERAL_HEALTH, MENTAL_HEALTH, EMERGENCY, or UNCLEAR. Provide your classification with confidence score.", enrichedMessage))
                     .build()
             ))
             .senderId(identityId)
             .build();
             
-        LettaMessageResponse response = lettaAgentService.sendMessage(agentId, request);
+        LettaMessageResponse response = lettaAgentService.sendMessage(intentExtractorId, request);
         
         // Parse intent classification from response
         return parseIntentFromResponse(response);
     }
     
     private String routeToHealthAgent(UserAgentMapping agents, IntentResult intent, 
-                                    String contextualMessage) {
+                                    String enrichedMessage) {
         String targetAgentId;
         String agentType;
         
@@ -188,7 +197,7 @@ public class AgentOrchestrationService {
             .messages(Arrays.asList(
                 LettaMessage.builder()
                     .role("user")
-                    .content(contextualMessage)
+                    .content(enrichedMessage)
                     .build()
             ))
             .senderId(agents.getIdentityId())

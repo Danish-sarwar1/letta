@@ -38,10 +38,10 @@ public class SessionManagementService {
             .senderId(agents.getIdentityId())
             .build();
             
-        lettaAgentService.sendMessage(agents.getContextCoordinatorId(), sessionStartRequest);
+        lettaAgentService.sendMessage(agents.getContextExtractorId(), sessionStartRequest);
         
         // Load relevant historical context from archival memory
-        loadHistoricalContext(agents, userId, sessionId);
+//        loadHistoricalContext(agents, userId, sessionId);
     }
     
     public void endSession(String userId, String sessionId, UserAgentMapping agents) {
@@ -56,7 +56,7 @@ public class SessionManagementService {
             sessionId, LocalDateTime.now()
         );
         
-        // Send session end message to context coordinator
+        // Send session end message to context extractor
         LettaMessageRequest sessionEndRequest = LettaMessageRequest.builder()
             .messages(Arrays.asList(
                 LettaMessage.builder()
@@ -67,7 +67,7 @@ public class SessionManagementService {
             .senderId(agents.getIdentityId())
             .build();
             
-        lettaAgentService.sendMessage(agents.getContextCoordinatorId(), sessionEndRequest);
+        lettaAgentService.sendMessage(agents.getContextExtractorId(), sessionEndRequest);
     }
     
     private void loadHistoricalContext(UserAgentMapping agents, String userId, String sessionId) {

@@ -8,8 +8,8 @@ import lombok.Data;
 public class UserAgentMapping {
     private String userId;
     private String identityId;
-    private String contextCoordinatorId;
-    private String intentClassifierId;
+    private String contextExtractorId;
+    private String intentExtractorId;
     private String generalHealthId;
     private String mentalHealthId;
 } 
