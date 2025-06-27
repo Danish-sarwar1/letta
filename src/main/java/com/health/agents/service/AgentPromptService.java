@@ -164,7 +164,7 @@ public class AgentPromptService {
     private String loadPromptFromFile(AgentType agentType) throws IOException {
         String filename = getPromptFilename(agentType);
         try {
-            ClassPathResource resource = new ClassPathResource("prompts/" + filename);
+            ClassPathResource resource = new ClassPathResource("agent-prompts/" + filename);
             String prompt = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
             log.info("Loaded prompt for {}: {} characters", agentType, prompt.length());
             return prompt;
@@ -177,13 +177,13 @@ public class AgentPromptService {
     private String getPromptFilename(AgentType agentType) {
         switch (agentType) {
             case CONTEXT_COORDINATOR:
-                return "context-coordinator.txt";
+                return "context-coordinator-prompt.txt";
             case INTENT_CLASSIFIER:
-                return "intent-classifier.txt";
+                return "intent-classifier-prompt.txt";
             case GENERAL_HEALTH:
-                return "general-health.txt";
+                return "general-health-prompt.txt";
             case MENTAL_HEALTH:
-                return "mental-health.txt";
+                return "mental-health-prompt.txt";
             default:
                 throw new IllegalArgumentException("Unknown agent type: " + agentType);
         }

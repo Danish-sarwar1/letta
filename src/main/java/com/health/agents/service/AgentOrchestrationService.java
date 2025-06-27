@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -31,6 +32,9 @@ public class AgentOrchestrationService {
     
     @Autowired
     private LettaAgentService lettaAgentService;
+    
+    @Autowired
+    private AgentPromptService agentPromptService;
     
     public ChatResponse startChat(String userId, String sessionId) {
         log.info("Starting chat for user {} with session {}", userId, sessionId);
@@ -263,5 +267,13 @@ public class AgentOrchestrationService {
 
     public UserAgentMapping debugCreateAgent(String userId) {
         return userIdentityService.getOrCreateUserAgents(userId);
+    }
+
+    public Map<String, Object> getPromptStatistics() {
+        return agentPromptService.getPromptStatistics();
+    }
+
+    public boolean areAllPromptsLoaded() {
+        return agentPromptService.areAllPromptsLoaded();
     }
 } 

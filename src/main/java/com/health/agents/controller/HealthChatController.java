@@ -1,5 +1,6 @@
 package com.health.agents.controller;
 
+import com.health.agents.model.UserAgentMapping;
 import com.health.agents.model.dto.ChatRequest;
 import com.health.agents.model.dto.ChatResponse;
 import com.health.agents.model.dto.EndChatRequest;
@@ -145,6 +146,50 @@ public class HealthChatController {
             ));
         } catch (Exception e) {
             log.error("Letta test failed", e);
+            return ResponseEntity.ok(Map.of(
+                "status", "error",
+                "error", e.getMessage(),
+                "error_class", e.getClass().getSimpleName()
+            ));
+        }
+    }
+
+    @GetMapping("/prompt-stats")
+    public ResponseEntity<?> getPromptStats() {
+        try {
+            Map<String, Object> stats = orchestrationService.getPromptStatistics();
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "prompt_statistics", stats,
+                "all_prompts_loaded", orchestrationService.areAllPromptsLoaded()
+            ));
+        } catch (Exception e) {
+            log.error("Failed to get prompt statistics", e);
+            return ResponseEntity.ok(Map.of(
+                "status", "error",
+                "error", e.getMessage(),
+                "error_class", e.getClass().getSimpleName()
+            ));
+        }
+    }
+
+    @PostMapping("/debug/create-agent/{userId}")
+    public ResponseEntity<?> debugCreateAgent(@PathVariable String userId) {
+        try {
+            UserAgentMapping result = orchestrationService.debugCreateAgent(userId);
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "user_agents", Map.of(
+                    "userId", result.getUserId(),
+                    "identityId", result.getIdentityId(),
+                    "contextCoordinatorId", result.getContextCoordinatorId(),
+                    "intentClassifierId", result.getIntentClassifierId(),
+                    "generalHealthId", result.getGeneralHealthId(),
+                    "mentalHealthId", result.getMentalHealthId()
+                )
+            ));
+        } catch (Exception e) {
+            log.error("Failed to create debug agent for user {}", userId, e);
             return ResponseEntity.ok(Map.of(
                 "status", "error",
                 "error", e.getMessage(),
