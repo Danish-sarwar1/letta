@@ -16,8 +16,8 @@ A sophisticated Java Spring Boot application that leverages Letta API to impleme
 
 Each user gets a dedicated ecosystem of 4 specialized agents:
 
-- **Context Coordinator**: Manages conversation flow and session context
-- **Intent Classifier**: Determines query intent and routes appropriately  
+- **Context Extractor**: Maintains complete conversation history in Letta memory blocks and enriches current messages with relevant context
+- **Intent Extractor**: Pure intent classification (GENERAL_HEALTH, MENTAL_HEALTH, EMERGENCY, UNCLEAR)
 - **General Health Agent**: Handles physical health consultations
 - **Mental Health Agent**: Provides mental health support
 
@@ -102,24 +102,26 @@ GET /api/health-chat/health
 1. **User Request** → Identity Check → Agent Creation (if needed)
 2. **Session Start** → Context Loading from archival memory
 3. **Message Processing**:
-   - Context Coordinator enriches message with session context
-   - Intent Classifier determines health domain (General/Mental)
-   - Appropriate Health Agent provides specialized response
+   - Context Extractor maintains complete conversation history in Letta memory
+   - Context Extractor enriches current message with relevant context from entire conversation
+   - Intent Extractor performs pure classification on enriched message
+   - Appropriate Health Agent provides specialized response with enriched context
 4. **Session End** → Context archived for future sessions
 
 ## 🧠 Agent Capabilities
 
-### Context Coordinator
-- Session state management
-- Conversation flow coordination
-- Context enrichment from user history
-- Memory block management
+### Context Extractor
+- **Full Conversation Management**: Maintains complete conversation history in `conversation_history` memory block
+- **Smart Context Selection**: Provides most relevant context from entire conversation for current message
+- **Session Tracking**: Updates session metadata in memory blocks
+- **Memory Block Updates**: Uses Letta's core memory tools to update context
+- **No Context Loss**: Never clears conversation history during session
 
-### Intent Classifier
-- High-accuracy intent classification
-- Confidence scoring (0.0-1.0)
-- Emergency detection and routing
-- Secondary domain identification
+### Intent Extractor
+- **Pure Classification**: Focuses only on intent extraction
+- **Four Intent Types**: GENERAL_HEALTH, MENTAL_HEALTH, EMERGENCY, UNCLEAR
+- **Confidence Scoring**: Provides 0.0-1.0 confidence levels
+- **Context-Aware**: Uses enriched messages for accurate classification
 
 ### General Health Agent
 - Physical health consultations
@@ -136,8 +138,8 @@ GET /api/health-chat/health
 ## 💾 Memory Management
 
 ### Core Memory (Session-scoped)
-- **Context Coordinator**: `session_context`, `user_profile`
-- **Intent Classifier**: `classification_patterns`
+- **Context Extractor**: `conversation_history`
+- **Intent Extractor**: `classification_patterns`
 - **Health Agents**: `current_context`, `health_history`/`therapeutic_context`
 
 ### Archival Memory (Persistent)

@@ -98,18 +98,18 @@ public class UserIdentityService {
             return null;
         }
         
-        String contextCoordinatorId = getPropertyValue(identity, "context_coordinator_id");
-        String intentClassifierId = getPropertyValue(identity, "intent_classifier_id");
+        String contextExtractorId = getPropertyValue(identity, "context_extractor_id");
+        String intentExtractorId = getPropertyValue(identity, "intent_extractor_id");
         String generalHealthId = getPropertyValue(identity, "general_health_id");
         String mentalHealthId = getPropertyValue(identity, "mental_health_id");
         
-        if (contextCoordinatorId != null && intentClassifierId != null && 
+        if (contextExtractorId != null && intentExtractorId != null && 
             generalHealthId != null && mentalHealthId != null) {
             return UserAgentMapping.builder()
                 .userId(getPropertyValue(identity, "user_id"))
                 .identityId(identity.getId())
-                .contextCoordinatorId(contextCoordinatorId)
-                .intentClassifierId(intentClassifierId)
+                .contextExtractorId(contextExtractorId)
+                .intentExtractorId(intentExtractorId)
                 .generalHealthId(generalHealthId)
                 .mentalHealthId(mentalHealthId)
                 .build();
@@ -121,13 +121,13 @@ public class UserIdentityService {
     private void storeAgentMappingInIdentity(String identityId, UserAgentMapping mapping) {
         List<LettaIdentityProperty> properties = Arrays.asList(
             LettaIdentityProperty.builder()
-                .key("context_coordinator_id")
-                .value(mapping.getContextCoordinatorId())
+                .key("context_extractor_id")
+                .value(mapping.getContextExtractorId())
                 .type("string")
                 .build(),
             LettaIdentityProperty.builder()
-                .key("intent_classifier_id")
-                .value(mapping.getIntentClassifierId())
+                .key("intent_extractor_id")
+                .value(mapping.getIntentExtractorId())
                 .type("string")
                 .build(),
             LettaIdentityProperty.builder()
@@ -150,41 +150,58 @@ public class UserIdentityService {
         log.info("Creating 4 specialized agents for user: {}", userId);
         
         // Create 4 specialized agents for this user
-        String contextCoordinatorId = createContextCoordinatorAgent(userId, identityId);
-        String intentClassifierId = createIntentClassifierAgent(userId, identityId);
+        String contextExtractorId = createContextCoordinatorAgent(userId, identityId);
+        String intentExtractorId = createIntentClassifierAgent(userId, identityId);
         String generalHealthId = createGeneralHealthAgent(userId, identityId);
         String mentalHealthId = createMentalHealthAgent(userId, identityId);
         
         return UserAgentMapping.builder()
             .userId(userId)
             .identityId(identityId)
-            .contextCoordinatorId(contextCoordinatorId)
-            .intentClassifierId(intentClassifierId)
+            .contextExtractorId(contextExtractorId)
+            .intentExtractorId(intentExtractorId)
             .generalHealthId(generalHealthId)
             .mentalHealthId(mentalHealthId)
             .build();
     }
     
     private String createContextCoordinatorAgent(String userId, String identityId) {
-        log.info("Creating Context Coordinator agent for user: {}", userId);
+        log.info("Creating Context Extractor agent for user: {}", userId);
+        
+        // Get the specialized prompt for this agent type - now focused on context extraction
+        String agentPrompt = agentPromptService.getAgentPrompt(AgentPromptService.AgentType.CONTEXT_COORDINATOR);
         
         LettaAgentRequest request = LettaAgentRequest.builder()
-            .name("context-coordinator-" + userId)
-            .description("Context coordination agent for user " + userId)
+            .name("context-extractor-" + userId)
+            .description("Context extraction agent for user " + userId + " - maintains last 3 messages for context")
             .identityIds(Arrays.asList(identityId))
             .memoryBlocks(Arrays.asList(
                 LettaMemoryBlock.builder()
+                    .label("agent_instructions")
+                    .value(agentPrompt)
+                    .description("Core agent instructions for context extraction")
+                    .limit(8000)
+                    .readOnly(true)
+                    .build(),
+                LettaMemoryBlock.builder()
+                    .label("conversation_history")
+                    .value("No messages in this session yet")
+                    .description("Complete conversation history for the current session - never cleared")
+                    .limit(16000)
+                    .readOnly(false)
+                    .build(),
+                LettaMemoryBlock.builder()
                     .label("session_context")
                     .value("No active session")
-                    .description("Current session context and conversation state")
-                    .limit(8000)
+                    .description("Current session metadata and status")
+                    .limit(2000)
                     .readOnly(false)
                     .build(),
                 LettaMemoryBlock.builder()
                     .label("user_profile")
                     .value("User ID: " + userId)
                     .description("User profile and preferences")
-                    .limit(4000)
+                    .limit(2000)
                     .readOnly(false)
                     .build()
             ))
@@ -192,8 +209,9 @@ public class UserIdentityService {
             .embedding(defaultEmbedding)
             .tools(Arrays.asList("core_memory_replace", "core_memory_append"))
             .metadata(Map.of(
-                "agent_type", "context_coordinator",
-                "user_id", userId
+                "agent_type", "context_extractor",
+                "user_id", userId,
+                "role", "context_management"
             ))
             .build();
             
@@ -201,18 +219,28 @@ public class UserIdentityService {
     }
     
     private String createIntentClassifierAgent(String userId, String identityId) {
-        log.info("Creating Intent Classifier agent for user: {}", userId);
+        log.info("Creating Intent Extractor agent for user: {}", userId);
+        
+        // Get the specialized prompt for this agent type - now focused purely on intent extraction
+        String agentPrompt = agentPromptService.getAgentPrompt(AgentPromptService.AgentType.INTENT_CLASSIFIER);
         
         LettaAgentRequest request = LettaAgentRequest.builder()
-            .name("intent-classifier-" + userId)
-            .description("Intent classification agent for user " + userId)
+            .name("intent-extractor-" + userId)
+            .description("Intent extraction agent for user " + userId + " - pure intent classification")
             .identityIds(Arrays.asList(identityId))
             .memoryBlocks(Arrays.asList(
                 LettaMemoryBlock.builder()
+                    .label("agent_instructions")
+                    .value(agentPrompt)
+                    .description("Core agent instructions for intent extraction and classification")
+                    .limit(8000)
+                    .readOnly(true)
+                    .build(),
+                LettaMemoryBlock.builder()
                     .label("classification_patterns")
-                    .value("Intent classification patterns for health queries")
+                    .value("Intent classification patterns for health queries: GENERAL_HEALTH, MENTAL_HEALTH, EMERGENCY, UNCLEAR")
                     .description("Learned patterns for intent classification")
-                    .limit(4000)
+                    .limit(2000)
                     .readOnly(false)
                     .build()
             ))
@@ -220,8 +248,9 @@ public class UserIdentityService {
             .embedding(defaultEmbedding)
             .tools(Arrays.asList("core_memory_replace", "core_memory_append"))
             .metadata(Map.of(
-                "agent_type", "intent_classifier",
-                "user_id", userId
+                "agent_type", "intent_extractor",
+                "user_id", userId,
+                "role", "intent_classification"
             ))
             .build();
             
@@ -231,11 +260,21 @@ public class UserIdentityService {
     private String createGeneralHealthAgent(String userId, String identityId) {
         log.info("Creating General Health agent for user: {}", userId);
         
+        // Get the specialized prompt for this agent type
+        String agentPrompt = agentPromptService.getAgentPrompt(AgentPromptService.AgentType.GENERAL_HEALTH);
+        
         LettaAgentRequest request = LettaAgentRequest.builder()
             .name("general-health-" + userId)
             .description("General health consultation agent for user " + userId)
             .identityIds(Arrays.asList(identityId))
             .memoryBlocks(Arrays.asList(
+                LettaMemoryBlock.builder()
+                    .label("agent_instructions")
+                    .value(agentPrompt)
+                    .description("Core agent instructions and behavior guidelines")
+                    .limit(16000)
+                    .readOnly(true)
+                    .build(),
                 LettaMemoryBlock.builder()
                     .label("health_history")
                     .value("User health consultation history")
@@ -267,11 +306,21 @@ public class UserIdentityService {
     private String createMentalHealthAgent(String userId, String identityId) {
         log.info("Creating Mental Health agent for user: {}", userId);
         
+        // Get the specialized prompt for this agent type
+        String agentPrompt = agentPromptService.getAgentPrompt(AgentPromptService.AgentType.MENTAL_HEALTH);
+        
         LettaAgentRequest request = LettaAgentRequest.builder()
             .name("mental-health-" + userId)
             .description("Mental health support agent for user " + userId)
             .identityIds(Arrays.asList(identityId))
             .memoryBlocks(Arrays.asList(
+                LettaMemoryBlock.builder()
+                    .label("agent_instructions")
+                    .value(agentPrompt)
+                    .description("Core agent instructions and behavior guidelines")
+                    .limit(16000)
+                    .readOnly(true)
+                    .build(),
                 LettaMemoryBlock.builder()
                     .label("mental_health_history")
                     .value("User mental health consultation history")
