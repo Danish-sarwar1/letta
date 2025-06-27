@@ -10,6 +10,7 @@ com/health/agents/integration/letta/model/LettaMessageResponse.class
 com/health/agents/integration/letta/model/LettaMemoryBlockFull.class
 com/health/agents/service/SessionManagementService.class
 com/health/agents/service/AgentOrchestrationService.class
+com/health/agents/integration/letta/model/LettaMessageResponse$Usage.class
 com/health/agents/integration/letta/model/LettaIdentityProperty$LettaIdentityPropertyBuilder.class
 com/health/agents/LettaHealthAgentsApplication.class
 com/health/agents/integration/letta/model/LettaMessageRequest.class
