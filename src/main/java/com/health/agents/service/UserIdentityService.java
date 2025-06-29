@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.health.agents.service.AgentPromptService.AgentType;
+import com.health.agents.config.MemoryArchitectureConfig;
+import com.health.agents.service.MemoryManagementService;
 
 @Service
 @Slf4j
@@ -29,6 +31,12 @@ public class UserIdentityService {
     
     @Autowired
     private AgentPromptService agentPromptService;
+    
+    @Autowired
+    private MemoryArchitectureConfig memoryArchitectureConfig;
+    
+    @Autowired
+    private MemoryManagementService memoryManagementService;
     
     @Value("${letta.api.default-model}")
     private String defaultModel;
@@ -166,42 +174,58 @@ public class UserIdentityService {
     }
     
     private String createContextCoordinatorAgent(String userId, String identityId) {
-        log.info("Creating Context Extractor agent for user: {}", userId);
+        log.info("Creating enhanced Context Extractor agent for user: {} (Sub-Plan 1 implementation)", userId);
         
-        // Get the specialized prompt for this agent type - now focused on context extraction
+        // Get the specialized prompt for this agent type - enhanced for centralized context management
         String agentPrompt = agentPromptService.getAgentPrompt(AgentPromptService.AgentType.CONTEXT_COORDINATOR);
         
         LettaAgentRequest request = LettaAgentRequest.builder()
             .name("context-extractor-" + userId)
-            .description("Context extraction agent for user " + userId + " - maintains last 3 messages for context")
+            .description("Enhanced centralized context management agent for user " + userId + " - maintains complete conversation context using advanced memory architecture")
             .identityIds(Arrays.asList(identityId))
             .memoryBlocks(Arrays.asList(
+                // Agent Instructions - Enhanced for centralized context management
                 LettaMemoryBlock.builder()
-                    .label("agent_instructions")
+                    .label(MemoryArchitectureConfig.AGENT_INSTRUCTIONS)
                     .value(agentPrompt)
-                    .description("Core agent instructions for context extraction")
-                    .limit(8000)
+                    .description("Enhanced agent instructions for centralized context management and memory operations")
+                    .limit(memoryArchitectureConfig.getAgentInstructionsLimit())
                     .readOnly(true)
                     .build(),
+                
+                // Conversation History - Complete conversation with turn-by-turn tracking
                 LettaMemoryBlock.builder()
-                    .label("conversation_history")
+                    .label(MemoryArchitectureConfig.CONVERSATION_HISTORY)
                     .value("No messages in this session yet")
-                    .description("Complete conversation history for the current session - never cleared")
-                    .limit(16000)
+                    .description(memoryArchitectureConfig.getConversationHistoryDescription())
+                    .limit(memoryArchitectureConfig.getConversationHistoryLimit())
                     .readOnly(false)
                     .build(),
+                
+                // Active Session - Current session state and metadata  
                 LettaMemoryBlock.builder()
-                    .label("session_context")
-                    .value("No active session")
-                    .description("Current session metadata and status")
-                    .limit(2000)
+                    .label(MemoryArchitectureConfig.ACTIVE_SESSION)
+                    .value(memoryManagementService.createActiveSessionContent("", userId, "INITIALIZING", "Initial Setup", 0))
+                    .description(memoryArchitectureConfig.getActiveSessionDescription())
+                    .limit(memoryArchitectureConfig.getActiveSessionLimit())
                     .readOnly(false)
                     .build(),
+                
+                // Context Summary - Human-readable conversation summary
                 LettaMemoryBlock.builder()
-                    .label("user_profile")
-                    .value("User ID: " + userId)
-                    .description("User profile and preferences")
-                    .limit(2000)
+                    .label(MemoryArchitectureConfig.CONTEXT_SUMMARY)
+                    .value("No conversation context available")
+                    .description(memoryArchitectureConfig.getContextSummaryDescription())
+                    .limit(memoryArchitectureConfig.getContextSummaryLimit())
+                    .readOnly(false)
+                    .build(),
+                
+                // Memory Metadata - Memory management metadata
+                LettaMemoryBlock.builder()
+                    .label(MemoryArchitectureConfig.MEMORY_METADATA)
+                    .value(memoryManagementService.createMemoryMetadata("", 0, 0, 0))
+                    .description(memoryArchitectureConfig.getMemoryMetadataDescription())
+                    .limit(memoryArchitectureConfig.getMemoryMetadataLimit())
                     .readOnly(false)
                     .build()
             ))
@@ -209,9 +233,12 @@ public class UserIdentityService {
             .embedding(defaultEmbedding)
             .tools(Arrays.asList("core_memory_replace", "core_memory_append"))
             .metadata(Map.of(
-                "agent_type", "context_extractor",
+                "agent_type", "context_extractor_enhanced",
                 "user_id", userId,
-                "role", "context_management"
+                "role", "centralized_context_management",
+                "memory_architecture_version", "sub_plan_1",
+                "supports_memory_rotation", "true",
+                "supports_bidirectional_updates", "true"
             ))
             .build();
             
