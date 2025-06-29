@@ -141,17 +141,25 @@ public class AgentOrchestrationService {
             .messages(Arrays.asList(
                 LettaMessage.builder()
                     .role("user")
-                    .content(String.format("SESSION:%s\nNEW_MESSAGE:%s\n\nPlease add this new message to your conversation_history by appending it to the existing history with the next sequential message number. Do NOT restart numbering from MSG1. Provide the enriched message with relevant context from the entire conversation for intent classification.", 
-                        sessionId, message))
+                    .content(String.format("NEW_MESSAGE:%s\n\nPlease process this message following the STRICT OUTPUT FORMAT, including both APPENDING_TO_HISTORY and ENRICHED_CONTEXT steps.", 
+                        message))
                     .build()
             ))
             .senderId(identityId)
             .build();
 
         LettaMessageResponse response = lettaAgentService.sendMessage(contextExtractorId, request);
+        String fullResponse = extractAssistantMessage(response);
 
-        // Extract enriched message from response
-        return extractAssistantMessage(response);
+        // Extract only the ENRICHED_CONTEXT part for intent classification
+        Pattern pattern = Pattern.compile("ENRICHED_CONTEXT:\\s*(.*?)(?=\\n\\s*$|$)", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(fullResponse);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        // If pattern not found, return the full response as fallback
+        return fullResponse;
     }
 
     /**
@@ -226,14 +234,23 @@ public class AgentOrchestrationService {
             .messages(Arrays.asList(
                 LettaMessage.builder()
                     .role("system")
-                    .content("Please provide the current conversation_history for this session.")
+                    .content("Please provide the current conversation history following the STRICT OUTPUT FORMAT.")
                     .build()
             ))
             .senderId(identityId)
             .build();
 
         LettaMessageResponse response = lettaAgentService.sendMessage(contextExtractorId, request);
-        return extractAssistantMessage(response);
+        String fullResponse = extractAssistantMessage(response);
+
+        // Extract only the CONVERSATION_HISTORY part
+        Pattern pattern = Pattern.compile("CONVERSATION_HISTORY:\\s*(.*?)(?=\\n\\s*$|$)", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(fullResponse);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        return fullResponse;
     }
 
     private String extractAssistantMessage(LettaMessageResponse response) {
@@ -307,8 +324,8 @@ public class AgentOrchestrationService {
             .messages(Arrays.asList(
                 LettaMessage.builder()
                     .role("system")
-                    .content(String.format("SESSION:%s\nAGENT_RESPONSE:%s\n\nPlease append this agent response to the conversation_history.", 
-                        sessionId, agentResponse))
+                    .content(String.format("AGENT_RESPONSE:%s\n\nPlease append this agent response to the conversation history following the STRICT OUTPUT FORMAT.", 
+                        agentResponse))
                     .build()
             ))
             .senderId(identityId)
