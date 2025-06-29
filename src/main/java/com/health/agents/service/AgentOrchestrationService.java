@@ -216,7 +216,7 @@ public class AgentOrchestrationService {
         // Find the last assistant message
         for (int i = response.getMessages().size() - 1; i >= 0; i--) {
             LettaMessage message = response.getMessages().get(i);
-            if ("assistant".equals(message.getRole())) {
+            if (message.getMessageType() != null && message.getMessageType().matches("assistant_.*")) {
                 return message.getContent();
             }
         }
