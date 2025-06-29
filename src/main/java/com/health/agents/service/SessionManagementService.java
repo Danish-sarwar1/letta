@@ -41,7 +41,7 @@ public class SessionManagementService {
         lettaAgentService.sendMessage(agents.getContextExtractorId(), sessionStartRequest);
         
         // Load relevant historical context from archival memory
-//        loadHistoricalContext(agents, userId, sessionId);
+        loadHistoricalContext(agents, userId, sessionId);
     }
     
     public void endSession(String userId, String sessionId, UserAgentMapping agents) {

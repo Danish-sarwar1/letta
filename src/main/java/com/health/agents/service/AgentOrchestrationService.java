@@ -23,29 +23,31 @@ import java.util.Map;
 @Service
 @Slf4j
 public class AgentOrchestrationService {
-    
+
     @Autowired
     private UserIdentityService userIdentityService;
-    
+
     @Autowired
     private SessionManagementService sessionManagementService;
-    
+
     @Autowired
     private LettaAgentService lettaAgentService;
-    
+
     @Autowired
     private AgentPromptService agentPromptService;
-    
+
+
+
     public ChatResponse startChat(String userId, String sessionId) {
         log.info("Starting chat for user {} with session {}", userId, sessionId);
-        
+
         try {
             // 1. Get or create user's agents
             UserAgentMapping agents = userIdentityService.getOrCreateUserAgents(userId);
-            
+
             // 2. Initialize session
             sessionManagementService.startSession(userId, sessionId, agents);
-            
+
             return ChatResponse.builder()
                 .message("Health consultation session started successfully. How can I help you today?")
                 .sessionId(sessionId)
@@ -53,7 +55,7 @@ public class AgentOrchestrationService {
                 .sessionActive(true)
                 .timestamp(LocalDateTime.now())
                 .build();
-                
+
         } catch (Exception e) {
             log.error("Failed to start chat for user {}: {}", userId, e.getMessage(), e);
             return ChatResponse.builder()
@@ -65,32 +67,33 @@ public class AgentOrchestrationService {
                 .build();
         }
     }
-    
+
     public ChatResponse processMessage(String userId, String sessionId, String message) {
         log.info("Processing message for user {} session {}: {}", userId, sessionId, message);
-        
+
         try {
             // 1. Get user's agents
             UserAgentMapping agents = userIdentityService.getOrCreateUserAgents(userId);
-            
-            // 2. Process with Context Extractor - maintain last 3 messages and enrich current message
+
+            // 2. Process with Context Extractor - maintain complete conversation history and enrich current message
+
             String enrichedMessage = extractAndEnrichContext(
                 agents.getContextExtractorId(), 
                 agents.getIdentityId(),
                 message, 
                 sessionId
             );
-            
+
             // 3. Extract intent from enriched message (pure classification)
             IntentResult intent = extractIntent(
                 agents.getIntentExtractorId(),
                 agents.getIdentityId(), 
                 enrichedMessage
             );
-            
+
             // 4. Route to appropriate health agent with enriched context
             String response = routeToHealthAgent(agents, intent, enrichedMessage);
-            
+
             return ChatResponse.builder()
                 .message(response)
                 .sessionId(sessionId)
@@ -100,7 +103,7 @@ public class AgentOrchestrationService {
                 .sessionActive(true)
                 .timestamp(LocalDateTime.now())
                 .build();
-                
+
         } catch (Exception e) {
             log.error("Failed to process message for user {}: {}", userId, e.getMessage(), e);
             return ChatResponse.builder()
@@ -112,10 +115,10 @@ public class AgentOrchestrationService {
                 .build();
         }
     }
-    
+
     public void endChat(String userId, String sessionId) {
         log.info("Ending chat for user {} session {}", userId, sessionId);
-        
+
         try {
             UserAgentMapping agents = userIdentityService.getOrCreateUserAgents(userId);
             sessionManagementService.endSession(userId, sessionId, agents);
@@ -123,38 +126,38 @@ public class AgentOrchestrationService {
             log.error("Failed to end chat for user {}: {}", userId, e.getMessage(), e);
         }
     }
-    
+
     /**
-     * Context Extractor: Maintains last 3 messages in Letta memory and enriches current message
+     * Context Extractor: Maintains complete conversation history in Letta memory and enriches current message
      */
     private String extractAndEnrichContext(String contextExtractorId, String identityId, 
                                           String message, String sessionId) {
         log.debug("Extracting and enriching context with agent: {}", contextExtractorId);
-        
+
         // Send message to Context Extractor to update conversation history and provide enriched context
         LettaMessageRequest request = LettaMessageRequest.builder()
             .messages(Arrays.asList(
                 LettaMessage.builder()
                     .role("user")
-                    .content(String.format("SESSION:%s\nNEW_MESSAGE:%s\n\nPlease add this new message to your conversation_history and provide the enriched message with relevant context from the entire conversation for intent classification.", 
+                    .content(String.format("SESSION:%s\nNEW_MESSAGE:%s\n\nPlease add this new message to your conversation_history by appending it to the existing history with the next sequential message number. Do NOT restart numbering from MSG1. Provide the enriched message with relevant context from the entire conversation for intent classification.", 
                         sessionId, message))
                     .build()
             ))
             .senderId(identityId)
             .build();
-            
+
         LettaMessageResponse response = lettaAgentService.sendMessage(contextExtractorId, request);
-        
+
         // Extract enriched message from response
         return extractAssistantMessage(response);
     }
-    
+
     /**
      * Intent Extractor: Pure intent classification without context management
      */
     private IntentResult extractIntent(String intentExtractorId, String identityId, String enrichedMessage) {
         log.debug("Extracting intent with agent: {}", intentExtractorId);
-        
+
         // Send enriched message to Intent Extractor for pure classification
         LettaMessageRequest request = LettaMessageRequest.builder()
             .messages(Arrays.asList(
@@ -165,18 +168,18 @@ public class AgentOrchestrationService {
             ))
             .senderId(identityId)
             .build();
-            
+
         LettaMessageResponse response = lettaAgentService.sendMessage(intentExtractorId, request);
-        
+
         // Parse intent classification from response
         return parseIntentFromResponse(response);
     }
-    
+
     private String routeToHealthAgent(UserAgentMapping agents, IntentResult intent, 
                                     String enrichedMessage) {
         String targetAgentId;
         String agentType;
-        
+
         switch (intent.getIntent()) {
             case GENERAL_HEALTH:
                 targetAgentId = agents.getGeneralHealthId();
@@ -190,9 +193,9 @@ public class AgentOrchestrationService {
                 targetAgentId = agents.getGeneralHealthId(); // Default to general health
                 agentType = "General Health (default)";
         }
-        
+
         log.debug("Routing to {} agent: {}", agentType, targetAgentId);
-        
+
         LettaMessageRequest request = LettaMessageRequest.builder()
             .messages(Arrays.asList(
                 LettaMessage.builder()
@@ -202,37 +205,37 @@ public class AgentOrchestrationService {
             ))
             .senderId(agents.getIdentityId())
             .build();
-            
+
         LettaMessageResponse response = lettaAgentService.sendMessage(targetAgentId, request);
-        
+
         return extractAssistantMessage(response);
     }
-    
+
     private String extractAssistantMessage(LettaMessageResponse response) {
         if (response == null || response.getMessages() == null || response.getMessages().isEmpty()) {
             return "I apologize, but I didn't receive a proper response. Please try again.";
         }
-        
+
         // Find the last assistant message
         for (int i = response.getMessages().size() - 1; i >= 0; i--) {
             LettaMessage message = response.getMessages().get(i);
-            if ("assistant".equals(message.getRole())) {
+            if ("assistant_message".equals(message.getMessageType())) {
                 return message.getContent();
             }
         }
-        
+
         // If no assistant message found, return the last message
         return response.getMessages().get(response.getMessages().size() - 1).getContent();
     }
-    
+
     private IntentResult parseIntentFromResponse(LettaMessageResponse response) {
         String content = extractAssistantMessage(response);
-        
+
         // Simple parsing logic - in production, this could be more sophisticated
         IntentType intent = IntentType.UNKNOWN;
         Double confidence = 0.5;
         String reasoning = "Default classification";
-        
+
         // Look for intent indicators in the response
         if (content.toLowerCase().contains("general_health") || 
             content.toLowerCase().contains("physical") ||
@@ -249,7 +252,7 @@ public class AgentOrchestrationService {
             confidence = 0.8;
             reasoning = "Mental health indicators detected";
         }
-        
+
         // Try to extract confidence from structured response
         Pattern confidencePattern = Pattern.compile("confidence[\":\\s]*(\\d+\\.?\\d*)");
         Matcher matcher = confidencePattern.matcher(content.toLowerCase());
@@ -260,7 +263,7 @@ public class AgentOrchestrationService {
                 log.debug("Failed to parse confidence from response: {}", matcher.group(1));
             }
         }
-        
+
         return IntentResult.builder()
             .intent(intent)
             .confidence(confidence)
