@@ -25,11 +25,168 @@ management:
     health:
       show-details: always
 
+# Memory Architecture Configuration for Centralized Context Management
+# Sub-Plan 1: Memory Architecture Design (Complete)
+# Sub-Plan 3: Enhanced Context Extraction (Complete)
+# Sub-Plan 4: Bidirectional Memory Updates (Complete)
+memory:
+  # Memory Block Size Limits (in characters)
+  conversation-history:
+    limit: 32000
+  active-session:
+    limit: 4000
+  context-summary:
+    limit: 8000
+  memory-metadata:
+    limit: 2000
+  agent-instructions:
+    limit: 16000
+  
+  # Memory Management Settings
+  rotation:
+    threshold: 0.8  # Rotate when 80% full
+  archival:
+    trigger-turns: 50  # Archive after 50 turns
+  
+  # Context Selection Strategy
+  context-window:
+    recent-turns: 5     # Recent turns to prioritize
+    max-relevant: 10    # Maximum relevant turns to include
+    
+  # Data Format (JSON or STRUCTURED_TEXT)
+  data-format: STRUCTURED_TEXT
+
+# ===== SUB-PLAN 3: Enhanced Context Extraction Configuration =====
+context:
+  # Context Selection Algorithm Weights
+  selection:
+    recent-weight: 1.0      # Recent context priority
+    topic-weight: 0.8       # Topic-based selection weight
+    medical-weight: 0.9     # Medical context priority
+    emotional-weight: 0.7   # Emotional context weight
+    followup-weight: 0.95   # Follow-up detection priority
+  
+  # Context Relevance Thresholds
+  relevance:
+    minimum-score: 0.1        # Minimum relevance to include
+    high-confidence: 0.8      # High confidence threshold
+    medium-confidence: 0.5    # Medium confidence threshold
+  
+  # Context Analysis Parameters
+  analysis:
+    keyword-similarity-threshold: 0.3   # Minimum keyword similarity
+    topic-match-boost: 0.3              # Bonus for topic tag matches
+    recency-decay-factor: 0.1           # Decay rate for older content
+  
+  # Conversation Pattern Analysis
+  patterns:
+    phase-transition-threshold: 5        # Turns between phase transitions
+    complexity-analysis-window: 3       # Window for complexity analysis
+    trend-confidence-threshold: 0.6     # Confidence for trend detection
+  
+  # Context Enrichment Settings
+  enrichment:
+    max-context-sections: 6              # Maximum sections in enriched context
+    summary-update-frequency: 5         # Update summary every N turns
+    enable-pattern-analysis: true       # Enable conversation pattern analysis
+    enable-trend-detection: true        # Enable trend detection
+  
+  # Medical Context Analysis
+  medical:
+    keyword-expansion: true             # Expand medical keyword matching
+    symptom-tracking: true              # Track symptom progression
+    medication-tracking: true           # Track medication discussions
+  
+  # Emotional Context Analysis
+  emotional:
+    sentiment-analysis: true                    # Enable sentiment analysis
+    state-progression: true                     # Track emotional state changes
+    concern-escalation-detection: true          # Detect increasing concern patterns
+  
+  # Performance Optimization
+  performance:
+    cache-context-results: true         # Cache context analysis results
+    cache-ttl-minutes: 30               # Cache time-to-live
+    parallel-analysis: true             # Enable parallel context analysis
+
+# ===== SUB-PLAN 4: Bidirectional Memory Updates Configuration =====
+bidirectional:
+  # Agent Response Analysis Settings
+  response-analysis:
+    enable-quality-scoring: true        # Enable response quality analysis
+    enable-context-correlation: true    # Enable context-response correlation analysis
+    enable-medical-accuracy: true       # Enable medical accuracy scoring
+    enable-emotional-appropriateness: true  # Enable emotional appropriateness analysis
+    enable-pattern-detection: true      # Enable response pattern detection
+  
+  # Response Quality Thresholds
+  quality:
+    excellent-threshold: 0.8            # Threshold for excellent responses
+    good-threshold: 0.6                 # Threshold for good responses
+    fair-threshold: 0.4                 # Threshold for fair responses
+    minimum-acceptable: 0.3             # Minimum acceptable quality
+  
+  # Context Utilization Analysis
+  context-utilization:
+    high-utilization-threshold: 0.8     # High context utilization threshold
+    good-utilization-threshold: 0.6     # Good context utilization threshold
+    enable-feedback-generation: true    # Generate feedback for context improvements
+    track-correlation-metrics: true     # Track context-response correlations
+  
+  # Memory Update Operations
+  memory-updates:
+    enable-atomic-updates: true         # Enable atomic memory operations
+    enable-parallel-updates: true       # Enable parallel memory block updates
+    max-retry-attempts: 3               # Maximum retry attempts for failed updates
+    retry-backoff-ms: 1000             # Base retry backoff time in milliseconds
+    update-timeout-seconds: 30          # Timeout for memory update operations
+    enable-rollback: true               # Enable rollback on partial failures
+  
+  # Memory Consistency Checks
+  consistency:
+    enable-integrity-checks: true       # Enable memory integrity validation
+    check-turn-consistency: true        # Verify turn number consistency
+    check-session-consistency: true     # Verify session ID consistency
+    check-metadata-consistency: true    # Verify response metadata consistency
+    check-size-limits: true            # Verify memory block size limits
+  
+  # Performance Monitoring
+  performance:
+    track-update-times: true            # Track bidirectional update performance
+    track-analysis-metrics: true        # Track response analysis performance
+    enable-performance-logging: true    # Enable detailed performance logging
+    alert-slow-updates-ms: 5000        # Alert threshold for slow updates
+  
+  # Feedback Loop Configuration
+  feedback:
+    enable-context-feedback: true       # Enable context improvement feedback
+    enable-pattern-updates: true        # Enable conversation pattern updates
+    enable-optimization-suggestions: true # Enable memory optimization suggestions
+    feedback-confidence-threshold: 0.7  # Minimum confidence for feedback generation
+  
+  # Response Pattern Analysis
+  patterns:
+    enable-medical-pattern-tracking: true    # Track medical response patterns
+    enable-emotional-pattern-tracking: true  # Track emotional response patterns
+    enable-quality-pattern-tracking: true    # Track response quality patterns
+    pattern-confidence-threshold: 0.6        # Confidence threshold for pattern detection
+  
+  # Advanced Analytics
+  analytics:
+    enable-correlation-analysis: true    # Enable advanced correlation analysis
+    enable-trend-prediction: true       # Enable response trend prediction
+    enable-effectiveness-scoring: true  # Enable overall effectiveness scoring
+    analytics-window-size: 10          # Number of turns for analytics window
+
 letta:
   api:
-    base-url: ${LETTA_API_URL:http://localhost:8283}
-    api-key: ${LETTA_API_KEY:}
-    timeout: 60s
+    base-url: http://localhost:8283
+    api-key: ""  # Empty for local development, can be set via environment variable
+    url: http://localhost:8283
+    timeout: 30000  # 30 seconds
+    retry:
+      max-attempts: 3
+      delay: 1000  # 1 second
     default-model: "letta/letta-free"
     default-embedding: "letta/letta-free"
     max-retries: 3
@@ -38,8 +195,15 @@ letta:
 logging:
   level:
     com.health.agents: DEBUG
+    com.health.agents.service.ContextEnrichmentService: DEBUG
+    com.health.agents.service.BiDirectionalMemoryService: DEBUG
+    com.health.agents.service.AgentResponseAnalysisService: DEBUG
     retrofit2: DEBUG
     okhttp3: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n" 
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Centralized Context Management - Enhanced with Sub-Plans 4 & 5
+# This section is removed as it's a duplicate of the earlier memory section
+# All configurations are now integrated into the single memory section above 
