@@ -76,7 +76,6 @@ public class AgentOrchestrationService {
             UserAgentMapping agents = userIdentityService.getOrCreateUserAgents(userId);
 
             // 2. Process with Context Extractor - maintain complete conversation history and enrich current message
-
             String enrichedMessage = extractAndEnrichContext(
                 agents.getContextExtractorId(), 
                 agents.getIdentityId(),
@@ -92,7 +91,10 @@ public class AgentOrchestrationService {
             );
 
             // 4. Route to appropriate health agent with enriched context
-            String response = routeToHealthAgent(agents, intent, enrichedMessage);
+            String response = routeToHealthAgent(agents, intent, enrichedMessage, sessionId);
+
+            // 5. Update conversation history with the agent's response
+            updateConversationHistory(agents.getContextExtractorId(), agents.getIdentityId(), response, sessionId);
 
             return ChatResponse.builder()
                 .message(response)
@@ -176,7 +178,7 @@ public class AgentOrchestrationService {
     }
 
     private String routeToHealthAgent(UserAgentMapping agents, IntentResult intent, 
-                                    String enrichedMessage) {
+                                    String enrichedMessage, String sessionId) {
         String targetAgentId;
         String agentType;
 
@@ -196,8 +198,16 @@ public class AgentOrchestrationService {
 
         log.debug("Routing to {} agent: {}", agentType, targetAgentId);
 
+        // First, get the full conversation history from the Context Extractor
+        String conversationHistory = getConversationHistory(agents.getContextExtractorId(), agents.getIdentityId(), sessionId);
+
+        // Send both the enriched message and conversation history to the health agent
         LettaMessageRequest request = LettaMessageRequest.builder()
             .messages(Arrays.asList(
+                LettaMessage.builder()
+                    .role("system")
+                    .content(String.format("CONVERSATION_HISTORY:\n%s", conversationHistory))
+                    .build(),
                 LettaMessage.builder()
                     .role("user")
                     .content(enrichedMessage)
@@ -208,6 +218,21 @@ public class AgentOrchestrationService {
 
         LettaMessageResponse response = lettaAgentService.sendMessage(targetAgentId, request);
 
+        return extractAssistantMessage(response);
+    }
+
+    private String getConversationHistory(String contextExtractorId, String identityId, String sessionId) {
+        LettaMessageRequest request = LettaMessageRequest.builder()
+            .messages(Arrays.asList(
+                LettaMessage.builder()
+                    .role("system")
+                    .content("Please provide the current conversation_history for this session.")
+                    .build()
+            ))
+            .senderId(identityId)
+            .build();
+
+        LettaMessageResponse response = lettaAgentService.sendMessage(contextExtractorId, request);
         return extractAssistantMessage(response);
     }
 
@@ -271,6 +296,25 @@ public class AgentOrchestrationService {
             .urgencyLevel("NORMAL")
             .routingNotes("Processed by intent classifier")
             .build();
+    }
+
+    private void updateConversationHistory(String contextExtractorId, String identityId, 
+                                         String agentResponse, String sessionId) {
+        log.debug("Updating conversation history with agent response");
+
+        // Send the agent's response to be added to conversation history
+        LettaMessageRequest request = LettaMessageRequest.builder()
+            .messages(Arrays.asList(
+                LettaMessage.builder()
+                    .role("system")
+                    .content(String.format("SESSION:%s\nAGENT_RESPONSE:%s\n\nPlease append this agent response to the conversation_history.", 
+                        sessionId, agentResponse))
+                    .build()
+            ))
+            .senderId(identityId)
+            .build();
+
+        lettaAgentService.sendMessage(contextExtractorId, request);
     }
 
     public List<LettaIdentityResponse> testLettaConnection() {
