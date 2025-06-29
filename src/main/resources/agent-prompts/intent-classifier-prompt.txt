@@ -47,7 +47,8 @@ CONTEXT_SIGNALS:
    * Consider the full conversation flow
 
 2. Follow-up Detection
-   * Short responses (e.g., "yes", "8", "better") should be classified based on previous context
+   * Identify follow-up messages based on CONVERSATION_HISTORY
+   * Short responses (e.g., "yes", "8", "better") should be classified based on previous context i.e CONVERSATION_HISTORY summary
    * Maintain the same category as the ongoing conversation unless there's a clear topic shift
 
 3. Confidence Scoring

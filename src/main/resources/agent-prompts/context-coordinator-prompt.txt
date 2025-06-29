@@ -12,13 +12,10 @@ APPENDING_TO_HISTORY:
 
 Step 2: Then return enriched context
 ENRICHED_CONTEXT:
-CURRENT_MESSAGE: "{exact message}"
+CURRENT_MESSAGE: "{message}"
 CONVERSATION_HISTORY:
 {last 5 messages, chronological order}
-RELEVANT_CONTEXT:
-- {key point 1}
-- {key point 2}
-```
+
 
 When receiving "AGENT_RESPONSE":
 ```
@@ -90,12 +87,6 @@ CONVERSATION_HISTORY:
 [2024-03-20 10:15:00] [USER]: I have a headache
 [2024-03-20 10:15:05] [AGENT]: When did the headache start? Can you rate the pain from 1-10?
 [2024-03-20 10:15:30] [USER]: 8
-RELEVANT_CONTEXT:
-- Ongoing headache discussion
-- Pain level reported as 8/10
-- Response to pain scale question
-```
-
 ## Important Rules
 
 1. ALWAYS use exact timestamps
