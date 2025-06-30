@@ -150,10 +150,12 @@ public class UserIdentityService {
         log.info("Creating 4 specialized agents for user: {}", userId);
 
         // Create 4 specialized agents for this user
-        String contextExtractorId = createContextCoordinatorAgent(userId, identityId);
-        String intentExtractorId = createIntentClassifierAgent(userId, identityId);
-        String generalHealthId = createGeneralHealthAgent(userId, identityId);
-        String mentalHealthId = createMentalHealthAgent(userId, identityId);
+        String conversationHistoryMemoryBlock = createMemoryBlock("conversation_history",
+            "", "Shared conversation memory accessible by all agents for context", 16000, false);
+        String contextExtractorId = createContextCoordinatorAgent(userId, identityId,conversationHistoryMemoryBlock);
+        String intentExtractorId = createIntentClassifierAgent(userId, identityId,conversationHistoryMemoryBlock);
+        String generalHealthId = createGeneralHealthAgent(userId, identityId,conversationHistoryMemoryBlock);
+        String mentalHealthId = createMentalHealthAgent(userId, identityId,conversationHistoryMemoryBlock);
 
         return UserAgentMapping.builder()
             .userId(userId)
@@ -165,7 +167,7 @@ public class UserIdentityService {
             .build();
     }
 
-    private String createContextCoordinatorAgent(String userId, String identityId) {
+    private String createContextCoordinatorAgent(String userId, String identityId,String conversationHistoryMemoryBlock) {
         log.info("Creating Context Extractor agent for user: {}", userId);
 
         // Get the specialized prompt for this agent type - now focused on context extraction
@@ -182,13 +184,6 @@ public class UserIdentityService {
                     .description("Core agent instructions for context extraction")
                     .limit(8000)
                     .readOnly(true)
-                    .build(),
-                LettaMemoryBlock.builder()
-                    .label("conversation_history")
-                    .value("")
-                    .description("Shared conversation memory accessible by all agents for context")
-                    .limit(16000)
-                    .readOnly(false)
                     .build(),
                 LettaMemoryBlock.builder()
                     .label("session_context")
@@ -208,6 +203,7 @@ public class UserIdentityService {
             .model(defaultModel)
             .embedding(defaultEmbedding)
             .tools(Arrays.asList("core_memory_replace", "core_memory_append"))
+            .blockIds(Arrays.asList(conversationHistoryMemoryBlock))
             .metadata(Map.of(
                 "agent_type", "context_extractor",
                 "user_id", userId,
@@ -218,7 +214,18 @@ public class UserIdentityService {
         return lettaAgentService.createAgent(request).getId();
     }
 
-    private String createIntentClassifierAgent(String userId, String identityId) {
+    String createMemoryBlock(String label, String value, String description, int limit, boolean readOnly) {
+         LettaMemoryBlock request = LettaMemoryBlock.builder()
+            .label(label)
+            .value(value)
+            .description(description)
+            .limit(limit)
+            .readOnly(readOnly)
+            .build();
+        return lettaAgentService.createMemoryBlock(request).getId();
+    }
+
+    private String createIntentClassifierAgent(String userId, String identityId,String conversationHistoryMemoryBlock) {
         log.info("Creating Intent Extractor agent for user: {}", userId);
 
         // Get the specialized prompt for this agent type - now focused purely on intent extraction
@@ -242,17 +249,11 @@ public class UserIdentityService {
                     .description("Learned patterns for intent classification")
                     .limit(2000)
                     .readOnly(false)
-                    .build(),
-                LettaMemoryBlock.builder()
-                    .label("conversation_history")
-                    .value("")
-                    .description("Shared conversation memory accessible by all agents for context")
-                    .limit(16000)
-                    .readOnly(false)
                     .build()
             ))
             .model(defaultModel)
             .embedding(defaultEmbedding)
+            .blockIds(Arrays.asList(conversationHistoryMemoryBlock))
             .tools(Arrays.asList("core_memory_replace", "core_memory_append"))
             .metadata(Map.of(
                 "agent_type", "intent_extractor",
@@ -264,7 +265,7 @@ public class UserIdentityService {
         return lettaAgentService.createAgent(request).getId();
     }
 
-    private String createGeneralHealthAgent(String userId, String identityId) {
+    private String createGeneralHealthAgent(String userId, String identityId, String conversationHistoryMemoryBlock) {
         log.info("Creating General Health agent for user: {}", userId);
 
         // Get the specialized prompt for this agent type
@@ -295,17 +296,11 @@ public class UserIdentityService {
                     .description("Current session health context")
                     .limit(8000)
                     .readOnly(false)
-                    .build(),
-                LettaMemoryBlock.builder()
-                    .label("conversation_history")
-                    .value("")
-                    .description("Shared conversation memory accessible by all agents for context")
-                    .limit(16000)
-                    .readOnly(false)
                     .build()
             ))
             .model(defaultModel)
             .embedding(defaultEmbedding)
+            .blockIds(Arrays.asList(conversationHistoryMemoryBlock))
             .tools(Arrays.asList("core_memory_replace", "core_memory_append"))
             .metadata(Map.of(
                 "agent_type", "general_health",
@@ -317,7 +312,7 @@ public class UserIdentityService {
         return lettaAgentService.createAgent(request).getId();
     }
 
-    private String createMentalHealthAgent(String userId, String identityId) {
+    private String createMentalHealthAgent(String userId, String identityId, String conversationHistoryMemoryBlock) {
         log.info("Creating Mental Health agent for user: {}", userId);
 
         // Get the specialized prompt for this agent type
@@ -348,17 +343,11 @@ public class UserIdentityService {
                     .description("Current session therapeutic context and emotional state")
                     .limit(8000)
                     .readOnly(false)
-                    .build(),
-                LettaMemoryBlock.builder()
-                    .label("conversation_history")
-                    .value("")
-                    .description("Shared conversation memory accessible by all agents for context")
-                    .limit(16000)
-                    .readOnly(false)
                     .build()
             ))
             .model(defaultModel)
             .embedding(defaultEmbedding)
+            .blockIds(Arrays.asList(conversationHistoryMemoryBlock))
             .tools(Arrays.asList("core_memory_replace", "core_memory_append"))
             .metadata(Map.of(
                 "agent_type", "mental_health",

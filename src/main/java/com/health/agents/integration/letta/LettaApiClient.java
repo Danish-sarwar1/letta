@@ -1,6 +1,7 @@
 package com.health.agents.integration.letta;
 
 import com.health.agents.integration.letta.model.*;
+import com.health.agents.integration.letta.model.LettaMemoryBlockResponse;
 import retrofit2.Call;
 import retrofit2.http.*;
 import java.util.List;
@@ -46,4 +47,8 @@ public interface LettaApiClient {
     @PATCH("/v1/agents/{agentId}/memory")
     Call<Void> updateAgentMemory(@Path("agentId") String agentId,
                                 @Body Object memoryUpdate);
+    @POST("/v1/blocks")
+    Call<LettaMemoryBlockResponse> createMemoryBlock(@Body LettaMemoryBlock request);
+
+
 } 
