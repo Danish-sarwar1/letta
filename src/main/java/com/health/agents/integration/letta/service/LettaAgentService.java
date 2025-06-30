@@ -3,6 +3,8 @@ package com.health.agents.integration.letta.service;
 import com.health.agents.integration.letta.LettaApiClient;
 import com.health.agents.integration.letta.model.LettaAgentRequest;
 import com.health.agents.integration.letta.model.LettaAgentResponse;
+import com.health.agents.integration.letta.model.LettaMemoryBlock;
+import com.health.agents.integration.letta.model.LettaMemoryBlockResponse;
 import com.health.agents.integration.letta.model.LettaMessageRequest;
 import com.health.agents.integration.letta.model.LettaMessageResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -95,6 +97,22 @@ public class LettaAgentService {
         } catch (IOException e) {
             log.error("Error deleting agent: {}", agentId, e);
             throw new RuntimeException("Error deleting agent", e);
+        }
+    }
+
+    public LettaMemoryBlockResponse createMemoryBlock(LettaMemoryBlock request) {
+        try {
+            Response<LettaMemoryBlockResponse> response = lettaApiClient.createMemoryBlock(request).execute();
+            if (response.isSuccessful()) {
+                log.info("Created memory block: {}", response.body().getId());
+                return response.body();
+            } else {
+                log.error("Failed to create memory block: {}", response.errorBody().string());
+                throw new RuntimeException("Failed to create memory block: " + response.code());
+            }
+        } catch (IOException e) {
+            log.error("Error creating memory block", e);
+            throw new RuntimeException("Error creating memory block", e);
         }
     }
 } 
